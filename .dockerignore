@@ -1,0 +1,9 @@
+node_modules
+build
+dist
+.git
+.github
+Dockerfile
+nginx.conf
+README.md
+.DS_Store
