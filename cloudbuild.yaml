@@ -1,27 +1,75 @@
-steps:
-  # 1. コンテナイメージのビルド
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA', '.']
+# ==============================================================================
+# Cloud Build 構成ファイル (cloudbuild.yaml)
+# 目的: GitHubのソースコードからコンテナを作成し、Cloud Runへ自動デプロイする
+# ==============================================================================
 
-  # 2. Cloud Run へのデプロイ
+steps:
+  # ----------------------------------------------------------------------------
+  # Step 1: コンテナイメージのビルド（箱の作成）
+  # ----------------------------------------------------------------------------
+  # name: 実行環境の指定。Googleが用意している「Dockerコマンドが使える環境」を呼び出します。
+  - name: 'gcr.io/cloud-builders/docker'
+    
+    # args: 実際に実行するコマンドの引数です。（「docker build -t イメージ名 .」に相当）
+    args: 
+      - 'build'
+      - '-t' # タグ（名前）を付けるオプション
+      # 保存先URLの指定: [リージョン]-[保存先種別]/[プロジェクトID]/[リポジトリ名]/[イメージ名]:[タグ]
+      # $COMMIT_SHA は、GitHubのコミットハッシュ（英数字の乱数）に自動で置き換わります。
+      # これにより、毎回「どのコミットで作られたイメージか」が明確になり、上書きを防ぎます。
+      - 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA'
+      - '.'  # 現在のディレクトリ（Dockerfileがある場所）をビルド対象に指定
+
+  # ----------------------------------------------------------------------------
+  # Step 2: Cloud Run へのデプロイ（箱の設置と公開設定）
+  # ----------------------------------------------------------------------------
+  # name: Googleが用意している「gcloudコマンドが使える環境」を呼び出します。
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    
+    # entrypoint: デフォルトの挙動を上書きし、直接「gcloud」コマンドを開始させます。
     entrypoint: gcloud
+    
+    # args: gcloudコマンドに渡す詳細な指示です。
     args:
       - 'run'
       - 'deploy'
-      - 'inventory-api'
+      - 'inventory-api' # Cloud Run 上で作成・更新するサービス名
+      
       - '--image'
+      # Step1で作った「コミットハッシュ付きの最新イメージ」をデプロイ対象として指定します。
       - 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA'
+      
       - '--region'
-      - 'asia-northeast1'
+      - 'asia-northeast1' # デプロイ先の地域（東京）
+      
       - '--ingress'
       - 'internal-and-cloud-load-balancing'
+      # 【重要セキュリティ設定】
+      # 「Cloud Run が直接インターネットからアクセスされること」を禁止し、
+      # ロードバランサー（または同一Google Cloud内の内部通信）経由のアクセスのみを許可します。
+      
       - '--service-account'
       - 'inventory-run-sa@cycom-gcp-dev.iam.gserviceaccount.com'
+      # 【重要権限設定】
+      # Cloud Run を動かす際の「身分証明書」を指定します。
+      # デフォルトのアカウントではなく、今回専用に作成し、必要な権限だけを絞って付与した
+      # カスタムサービスアカウントを使用することで、セキュリティを高めています。
 
-# docker push コマンドの代わりに、images 指定を使うのがベストプラクティスです
+# ----------------------------------------------------------------------------
+# images: Artifact Registry への自動プッシュ設定
+# ----------------------------------------------------------------------------
+# ここにイメージ名を書いておくと、Stepのすべての処理が成功した「後」に、
+# Cloud Build が自動的に Artifact Registry (倉庫) へイメージを保存(Push)してくれます。
+# 以前発生していた権限エラー (denied) を防ぐため、明示的な `docker push` コマンド(Step)を使わず、
+# Google Cloud が推奨するこの内部機能を使うのがベストプラクティスです。
 images:
   - 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA'
 
+# ----------------------------------------------------------------------------
+# options: Cloud Build 全体の動作オプション
+# ----------------------------------------------------------------------------
 options:
+  # ビルドの実行ログの保存先を指定します。
+  # デフォルトでは Cloud Storage にも保存されますが、CLOUD_LOGGING_ONLY にすることで、
+  # ログ専用のサービス（Cloud Logging）のみに保存させ、ストレージ容量の無駄使いを防ぎます。
   logging: CLOUD_LOGGING_ONLY
