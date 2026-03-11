@@ -24,3 +24,7 @@ steps:
       - '--allow-unauthenticated'
       - '--service-account'
       - 'inventory-run-sa@cycom-gcp-dev.iam.gserviceaccount.com'
+
+# ログ保存先のエラーを回避するための設定
+options:
+  logging: CLOUD_LOGGING_ONLY
