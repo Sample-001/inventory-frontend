@@ -1,10 +1,9 @@
 steps:
+  # 1. コンテナイメージのビルド
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA', '.']
-  
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA']
-  
+
+  # 2. Cloud Run へのデプロイ
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -15,16 +14,14 @@ steps:
       - 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA'
       - '--region'
       - 'asia-northeast1'
-      - '--min-instances'
-      - '3'
-      - '--max-instances'
-      - '6'
       - '--ingress'
       - 'internal-and-cloud-load-balancing'
-      - '--allow-unauthenticated'
       - '--service-account'
       - 'inventory-run-sa@cycom-gcp-dev.iam.gserviceaccount.com'
 
-# ログ保存先のエラーを回避するための設定
+# docker push コマンドの代わりに、images 指定を使うのがベストプラクティスです
+images:
+  - 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA'
+
 options:
   logging: CLOUD_LOGGING_ONLY
