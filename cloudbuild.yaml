@@ -1,9 +1,9 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/my-inventory-project-123/inventory-repo/inventory-api:$COMMIT_SHA', '.']
+    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA', '.']
   
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'asia-northeast1-docker.pkg.dev/my-inventory-project-123/inventory-repo/inventory-api:$COMMIT_SHA']
+    args: ['push', 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA']
   
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -12,7 +12,7 @@ steps:
       - 'deploy'
       - 'inventory-api'
       - '--image'
-      - 'asia-northeast1-docker.pkg.dev/my-inventory-project-123/inventory-repo/inventory-api:$COMMIT_SHA'
+      - 'asia-northeast1-docker.pkg.dev/cycom-gcp-dev/inventory-repo/inventory-api:$COMMIT_SHA'
       - '--region'
       - 'asia-northeast1'
       - '--min-instances'
@@ -23,4 +23,4 @@ steps:
       - 'internal-and-cloud-load-balancing'
       - '--allow-unauthenticated'
       - '--service-account'
-      - 'inventory-run-sa@my-inventory-project-123.iam.gserviceaccount.com'
+      - 'inventory-run-sa@cycom-gcp-dev.iam.gserviceaccount.com'
